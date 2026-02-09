@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { data, Todo } from "../data/todo";
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 export default function Index() {
   const [todos, setTodos] = useState<Todo[]>(
@@ -48,22 +49,22 @@ export default function Index() {
     setTodos(todos.filter((todo) => todo.id !== id));
   };
 
-  const renderItem = ({ item }: { item: Todo }) => (
-    <Pressable
-      style={styles.todoItem}
-      onPress={() => toggleTodo(item.id)}
-      onLongPress={() => removeTodo(item.id)}
-    >
+
+
+const renderItem = ({ item }: { item: Todo }) => (
+    <View style={styles.todoItem}>
       <Text
-        style={[
-          styles.todoText,
-          item.completed && styles.completedText,
-        ]}
+        style={[styles.todoText, item.completed && styles.completedText]}
+        onPress={() => toggleTodo(item.id)}
       >
         {item.title}
       </Text>
-    </Pressable>
-  );
+      <Pressable onPress={() => removeTodo(item.id)}>
+        <MaterialCommunityIcons name="delete-circle" size={36} color="red" selectable={undefined} />
+      </Pressable>
+    </View>
+  )
+
 
   return (
     <SafeAreaView style={styles.container}>

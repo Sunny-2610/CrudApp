@@ -7,23 +7,22 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { useState, useContext ,useEffect} from "react";
+import { useState, useContext, useEffect } from "react";
 import Octicons from "@expo/vector-icons/Octicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
-import Animated, {LinearTransition } from 'react-native-reanimated'
+import Animated, { LinearTransition } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
-
-
+import { useRouter } from "expo-router";
 
 import { ThemeContext } from "../context/ThemeContext";
 import { data, Todo } from "../data/todo";
 
 export default function Index() {
-  // ✅ useContext MUST be inside component
   const themeContext = useContext(ThemeContext);
+  const router = useRouter();
 
   if (!themeContext) {
     throw new Error("Index must be used inside ThemeProvider");
@@ -31,61 +30,56 @@ export default function Index() {
 
   const { colorScheme, setColorScheme, theme } = themeContext;
 
-  const [todos, setTodos] = useState<Todo[]>(
-    [...data].sort((a, b) => b.id - a.id)
-  );
-
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [text, setText] = useState("");
 
   const [loaded, error] = useFonts({
     Inter_500Medium,
   });
 
-    useEffect(() => {
+  // ✅ Load todos from storage (FIXED: removed [data] dependency)
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        const jsonValue = await AsyncStorage.getItem("TodoApp")
-        const storageTodos = jsonValue != null ? JSON.parse(jsonValue) : null
+        const jsonValue = await AsyncStorage.getItem("TodoApp");
+        const storageTodos = jsonValue ? JSON.parse(jsonValue) : null;
 
         if (storageTodos && storageTodos.length) {
-          setTodos(storageTodos.sort((a: Todo, b: Todo) => b.id - a.id))
+          setTodos(storageTodos.sort((a: Todo, b: Todo) => b.id - a.id));
         } else {
-          setTodos(data.sort((a: Todo, b: Todo) => b.id - a.id))
+          setTodos([...data].sort((a, b) => b.id - a.id));
         }
       } catch (e) {
-        console.error(e)
+        console.error(e);
       }
-    }
+    };
 
-    fetchData()
-  }, [data])   
+    fetchData();
+  }, []);
 
-   useEffect(() => {
+  // ✅ Save todos to storage
+  useEffect(() => {
     const storeData = async () => {
       try {
-        const jsonValue = JSON.stringify(todos)
-        await AsyncStorage.setItem("TodoApp", jsonValue)
+        const jsonValue = JSON.stringify(todos);
+        await AsyncStorage.setItem("TodoApp", jsonValue);
       } catch (e) {
-        console.error(e)
+        console.error(e);
       }
-    }
+    };
 
-    storeData()
-  }, [todos])
+    storeData();
+  }, [todos]);
 
   if (!loaded && !error) {
     return null;
   }
-  
-
-
 
   const addTodo = () => {
     if (!text.trim()) return;
 
-    const newId = todos.length
-      ? Math.max(...todos.map((t) => t.id)) + 1
-      : 1;
+    const newId =
+      todos.length > 0 ? Math.max(...todos.map((t) => t.id)) + 1 : 1;
 
     const newTodo: Todo = {
       id: newId,
@@ -111,35 +105,59 @@ export default function Index() {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
   };
 
-  const renderItem = ({ item }: { item: Todo }) => (
-    <View style={[styles.todoItem, { borderBottomColor: theme.border }]}>
-      <Pressable onPress={() => toggleTodo(item.id)} style={styles.todoTextContainer}>
-        <Text
-          style={[
-            styles.todoText,
-            { color: theme.text },
-            item.completed && styles.completedText,
-          ]}
-        >
-          {item.title}
-        </Text>
-      </Pressable>
+  const handlePress = (id: number) => {
+    router.push(`/todos/${id}`);
+  };
 
-      <Pressable onPress={() => removeTodo(item.id)} style={styles.deleteButton}>
-        <MaterialCommunityIcons
-          name="delete-circle"
-          size={36}
-          color="red"
-        />
-      </Pressable>
-    </View>
+  const renderItem = ({ item }: { item: Todo }) => (
+    <Pressable
+      onPress={() => handlePress(item.id)}
+      onLongPress={() => toggleTodo(item.id)}
+    >
+      <View
+        style={[
+          styles.todoItem,
+          { borderBottomColor: theme.border },
+        ]}
+      >
+        <View style={styles.todoTextContainer}>
+          <Text
+            style={[
+              styles.todoText,
+              { color: theme.text },
+              item.completed && styles.completedText,
+            ]}
+          >
+            {item.title}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={() => removeTodo(item.id)}
+          style={styles.deleteButton}
+        >
+          <MaterialCommunityIcons
+            name="delete-circle"
+            size={32}
+            color="red"
+          />
+        </Pressable>
+      </View>
+    </Pressable>
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: theme.background },
+      ]}
+    >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>My Todos</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            My Todos
+          </Text>
         </View>
 
         <View style={styles.inputContainer}>
@@ -149,7 +167,10 @@ export default function Index() {
               {
                 color: theme.text,
                 borderColor: theme.border,
-                backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f5f5f5',
+                backgroundColor:
+                  colorScheme === "dark"
+                    ? "#1a1a1a"
+                    : "#f5f5f5",
               },
             ]}
             placeholder="Add a new todo"
@@ -164,15 +185,17 @@ export default function Index() {
           </Pressable>
 
           <Pressable
-            onPress={() => setColorScheme(colorScheme === 'light' ? 'dark' : 'light')} 
+            onPress={() =>
+              setColorScheme(
+                colorScheme === "light" ? "dark" : "light"
+              )
+            }
             style={styles.themeButton}
           >
-            <Octicons 
-              name={colorScheme === 'dark' ? "moon" : "sun"} 
-              size={36} 
-              color={theme.text} 
-              selectable={undefined} 
-              style={{ width: 36 }} 
+            <Octicons
+              name={colorScheme === "dark" ? "moon" : "sun"}
+              size={28}
+              color={theme.text}
             />
           </Pressable>
         </View>
@@ -182,13 +205,15 @@ export default function Index() {
           renderItem={renderItem}
           keyExtractor={(todo) => todo.id.toString()}
           contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={Platform.OS === 'web'}
+          showsVerticalScrollIndicator={Platform.OS === "web"}
           itemLayoutAnimation={LinearTransition}
           keyboardDismissMode="on-drag"
         />
       </View>
-      
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+
+      <StatusBar
+        style={colorScheme === "dark" ? "light" : "dark"}
+      />
     </SafeAreaView>
   );
 }
@@ -202,21 +227,16 @@ const styles = StyleSheet.create({
     maxWidth: 800,
     width: "100%",
     alignSelf: "center",
-    ...Platform.select({
-      web: {
-        marginHorizontal: 'auto',
-      },
-    }),
   },
   header: {
     paddingHorizontal: 10,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontFamily: "Inter_500Medium",
   },
   inputContainer: {
@@ -224,7 +244,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 10,
     gap: 10,
-    width: "100%",
   },
   input: {
     flex: 1,
@@ -241,18 +260,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addButtonText: {
     fontSize: 16,
     color: "white",
-    fontWeight: '600',
+    fontWeight: "600",
   },
   themeButton: {
     padding: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   listContainer: {
     paddingBottom: 20,

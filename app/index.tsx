@@ -7,12 +7,16 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { useState, useContext } from "react";
+import { useState, useContext ,useEffect} from "react";
 import Octicons from "@expo/vector-icons/Octicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
 import Animated, {LinearTransition } from 'react-native-reanimated'
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StatusBar } from "expo-status-bar";
+
+
 
 import { ThemeContext } from "../context/ThemeContext";
 import { data, Todo } from "../data/todo";
@@ -37,9 +41,44 @@ export default function Index() {
     Inter_500Medium,
   });
 
+    useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const jsonValue = await AsyncStorage.getItem("TodoApp")
+        const storageTodos = jsonValue != null ? JSON.parse(jsonValue) : null
+
+        if (storageTodos && storageTodos.length) {
+          setTodos(storageTodos.sort((a: Todo, b: Todo) => b.id - a.id))
+        } else {
+          setTodos(data.sort((a: Todo, b: Todo) => b.id - a.id))
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    fetchData()
+  }, [data])   
+
+   useEffect(() => {
+    const storeData = async () => {
+      try {
+        const jsonValue = JSON.stringify(todos)
+        await AsyncStorage.setItem("TodoApp", jsonValue)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    storeData()
+  }, [todos])
+
   if (!loaded && !error) {
     return null;
   }
+  
+
+
 
   const addTodo = () => {
     if (!text.trim()) return;
@@ -148,6 +187,8 @@ export default function Index() {
           keyboardDismissMode="on-drag"
         />
       </View>
+      
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaView>
   );
 }

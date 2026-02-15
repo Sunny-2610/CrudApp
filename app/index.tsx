@@ -5,6 +5,7 @@ import {
   Pressable,
   FlatList,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { useState, useContext } from "react";
 import Octicons from "@expo/vector-icons/Octicons";
@@ -72,18 +73,19 @@ export default function Index() {
 
   const renderItem = ({ item }: { item: Todo }) => (
     <View style={[styles.todoItem, { borderBottomColor: theme.border }]}>
-      <Text
-        style={[
-          styles.todoText,
-          { color: theme.text },
-          item.completed && styles.completedText,
-        ]}
-        onPress={() => toggleTodo(item.id)}
-      >
-        {item.title}
-      </Text>
+      <Pressable onPress={() => toggleTodo(item.id)} style={styles.todoTextContainer}>
+        <Text
+          style={[
+            styles.todoText,
+            { color: theme.text },
+            item.completed && styles.completedText,
+          ]}
+        >
+          {item.title}
+        </Text>
+      </Pressable>
 
-      <Pressable onPress={() => removeTodo(item.id)}>
+      <Pressable onPress={() => removeTodo(item.id)} style={styles.deleteButton}>
         <MaterialCommunityIcons
           name="delete-circle"
           size={36}
@@ -94,85 +96,147 @@ export default function Index() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[
-            styles.input,
-            {
-              color: theme.text,
-              borderColor: theme.border,
-            },
-          ]}
-          placeholder="Add a new todo"
-          placeholderTextColor="gray"
-          value={text}
-          onChangeText={setText}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: theme.text }]}>My Todos</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: theme.text,
+                borderColor: theme.border,
+                backgroundColor: colorScheme === 'dark' ? '#1a1a1a' : '#f5f5f5',
+              },
+            ]}
+            placeholder="Add a new todo"
+            placeholderTextColor="gray"
+            value={text}
+            onChangeText={setText}
+            onSubmitEditing={addTodo}
+          />
+
+          <Pressable onPress={addTodo} style={styles.addButton}>
+            <Text style={styles.addButtonText}>Add</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setColorScheme(colorScheme === 'light' ? 'dark' : 'light')} 
+            style={styles.themeButton}
+          >
+            <Octicons 
+              name={colorScheme === 'dark' ? "moon" : "sun"} 
+              size={36} 
+              color={theme.text} 
+              selectable={undefined} 
+              style={{ width: 36 }} 
+            />
+          </Pressable>
+        </View>
+
+        <FlatList
+          data={todos}
+          renderItem={renderItem}
+          keyExtractor={(todo) => todo.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={Platform.OS === 'web'}
         />
-
-        <Pressable onPress={addTodo} style={styles.addButton}>
-          <Text style={styles.addButtonText}>Add</Text>
-        </Pressable>
-
-         <Pressable
-          onPress={() => setColorScheme(colorScheme === 'light' ? 'dark' : 'light')} style={{ marginLeft: 10 }}>
-
-          <Octicons name={colorScheme === 'dark' ? "moon" : "sun"} size={36} color={theme.text} selectable={undefined} style={{ width: 36 }} />
-
-        </Pressable>
       </View>
-
-      <FlatList
-        data={todos}
-        renderItem={renderItem}
-        keyExtractor={(todo) => todo.id.toString()}
-        contentContainerStyle={{ flexGrow: 1 }}
-      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+    maxWidth: 800,
+    width: "100%",
+    alignSelf: "center",
+    ...Platform.select({
+      web: {
+        marginHorizontal: 'auto',
+      },
+    }),
+  },
+  header: {
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: "Inter_500Medium",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
     gap: 10,
+    width: "100%",
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    fontSize: 18,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
     fontFamily: "Inter_500Medium",
+    minHeight: 48,
   },
   addButton: {
-    backgroundColor: "white",
-    borderRadius: 5,
-    padding: 10,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButtonText: {
-    fontSize: 18,
-    color: "black",
+    fontSize: 16,
+    color: "white",
+    fontWeight: '600',
+  },
+  themeButton: {
+    padding: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContainer: {
+    paddingBottom: 20,
   },
   todoItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
+    minHeight: 60,
+  },
+  todoTextContainer: {
+    flex: 1,
+    paddingRight: 10,
   },
   todoText: {
-    flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inter_500Medium",
+    lineHeight: 22,
   },
   completedText: {
     textDecorationLine: "line-through",
     color: "gray",
+    opacity: 0.6,
+  },
+  deleteButton: {
+    padding: 4,
   },
 });

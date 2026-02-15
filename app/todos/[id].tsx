@@ -1,6 +1,5 @@
 // ✅ Get dynamic route param from URL (expo-router)
 import { useLocalSearchParams } from "expo-router";
-
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { useState, useEffect, useContext } from 'react';
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,219 +26,234 @@ import { useRouter } from "expo-router";
 import { Todo } from "@/data/todo";
 
 export default function EditScreen() {
+  // 🔥 Get dynamic ID from route (example: /edit/5)
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-    // 🔥 Get dynamic ID from route (example: /edit/5)
-    const { id } = useLocalSearchParams<{ id: string }>();
+  // 🧠 State to store the todo being edited
+  const [todo, setTodo] = useState<Todo | null>(null);
 
-    // 🧠 State to store the todo being edited
-    const [todo, setTodo] = useState<Todo | null>(null);
+  // 🌙 Access theme context
+  const themeContext = useContext(ThemeContext);
 
-    // 🌙 Access theme context
-    const themeContext = useContext(ThemeContext);
+  // Safety check (ensures ThemeProvider wraps app)
+  if (!themeContext) {
+    throw new Error("EditScreen must be used inside ThemeProvider");
+  }
 
-    // Safety check (ensures ThemeProvider wraps app)
-    if (!themeContext) {
-        throw new Error("EditScreen must be used inside ThemeProvider");
-    }
+  const { colorScheme, setColorScheme, theme } = themeContext;
 
-    const { colorScheme, setColorScheme, theme } = themeContext;
+  // 🚀 Router for navigation
+  const router = useRouter();
 
-    // 🚀 Router for navigation
-    const router = useRouter();
+  // 🎨 Load custom font
+  const [loaded, error] = useFonts({
+    Inter_500Medium,
+  });
 
-    // 🎨 Load custom font
-    const [loaded, error] = useFonts({
-        Inter_500Medium,
-    });
+  // 🔄 Fetch todo from AsyncStorage when screen loads
+  useEffect(() => {
+    // Function to get data from storage
+    const fetchData = async (todoId: string) => {
+      try {
+        // Get stored todos
+        const jsonValue = await AsyncStorage.getItem("TodoApp");
 
-    // 🔄 Fetch todo from AsyncStorage when screen loads
-    useEffect(() => {
+        // Convert JSON string into array
+        const storageTodos: Todo[] = jsonValue != null ? JSON.parse(jsonValue) : null;
 
-        // Function to get data from storage
-        const fetchData = async (todoId: string) => {
-            try {
-                // Get stored todos
-                const jsonValue = await AsyncStorage.getItem("TodoApp");
+        // If data exists
+        if (storageTodos && storageTodos.length) {
+          // Find the todo matching the dynamic ID
+          const myTodo = storageTodos.find(
+            todo => todo.id.toString() === todoId
+          );
 
-                // Convert JSON string into array
-                const storageTodos: Todo[] =
-                    jsonValue != null ? JSON.parse(jsonValue) : null;
-
-                // If data exists
-                if (storageTodos && storageTodos.length) {
-
-                    // Find the todo matching the dynamic ID
-                    const myTodo = storageTodos.find(
-                        todo => todo.id.toString() === todoId
-                    );
-
-                    // If found → update state
-                    if (myTodo) {
-                        setTodo(myTodo);
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        // Call function only if ID exists
-        if (id) {
-            fetchData(id as string);
+          // If found → update state
+          if (myTodo) {
+            setTodo(myTodo);
+          }
         }
-
-    }, [id]); // Runs whenever ID changes
-
-
-    // Wait until font loads
-    if (!loaded && !error) {
-        return null;
-    }
-
-    // 🎨 Generate dynamic styles based on theme
-    const styles = createStyles(theme, colorScheme);
-
-
-    // 💾 Save updated todo
-    const handleSave = async () => {
-
-        // Prevent saving empty title
-        if (!todo || !todo.title.trim()) return;
-
-        try {
-
-            // Trim title and prepare updated object
-            const savedTodo: Todo = {
-                ...todo,
-                title: todo.title.trim()
-            };
-
-            // Get existing todos from storage
-            const jsonValue = await AsyncStorage.getItem('TodoApp');
-            const storageTodos: Todo[] =
-                jsonValue != null ? JSON.parse(jsonValue) : null;
-
-            if (storageTodos && storageTodos.length) {
-
-                // Remove old version of edited todo
-                const otherTodos =
-                    storageTodos.filter(t => t.id !== savedTodo.id);
-
-                // Add updated todo back
-                const allTodos = [...otherTodos, savedTodo];
-
-                // Save updated list
-                await AsyncStorage.setItem(
-                    'TodoApp',
-                    JSON.stringify(allTodos)
-                );
-
-            } else {
-                // If no todos exist, save new one
-                await AsyncStorage.setItem(
-                    'TodoApp',
-                    JSON.stringify([savedTodo])
-                );
-            }
-
-            // Navigate back to home screen
-            router.push('/');
-
-        } catch (e) {
-            console.error(e);
-        }
+      } catch (e) {
+        console.error(e);
+      }
     };
 
+    // Call function only if ID exists
+    if (id) {
+      fetchData(id as string);
+    }
+  }, [id]); // Runs whenever ID changes
 
-    return (
-        <SafeAreaView style={styles.container}>
+  // Wait until font loads
+  if (!loaded && !error) {
+    return null;
+  }
 
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>Edit Todo</Text>
-            </View>
+  // 💾 Save updated todo
+  const handleSave = async () => {
+    // Prevent saving empty title
+    if (!todo || !todo.title.trim()) return;
 
-            {/* Input + Theme Toggle */}
-            <View style={styles.inputContainer}>
+    try {
+      // Trim title and prepare updated object
+      const savedTodo: Todo = { ...todo, title: todo.title.trim() };
 
-                <TextInput
-                    style={styles.input}
-                    maxLength={30}
-                    placeholder="Edit todo"
-                    placeholderTextColor="gray"
+      // Get existing todos from storage
+      const jsonValue = await AsyncStorage.getItem('TodoApp');
+      const storageTodos: Todo[] = jsonValue != null ? JSON.parse(jsonValue) : null;
 
-                    // Show current title
-                    value={todo?.title || ''}
+      if (storageTodos && storageTodos.length) {
+        // Remove old version of edited todo
+        const otherTodos = storageTodos.filter(t => t.id !== savedTodo.id);
 
-                    // Update state when typing
-                    onChangeText={(text) =>
-                        setTodo(prev =>
-                            prev ? { ...prev, title: text } : null
-                        )
-                    }
+        // Add updated todo back
+        const allTodos = [...otherTodos, savedTodo];
 
-                    // Save when user presses enter
-                    onSubmitEditing={handleSave}
-                />
+        // Save updated list
+        await AsyncStorage.setItem(
+          'TodoApp',
+          JSON.stringify(allTodos)
+        );
+      } else {
+        // If no todos exist, save new one
+        await AsyncStorage.setItem(
+          'TodoApp',
+          JSON.stringify([savedTodo])
+        );
+      }
 
-                {/* Theme Toggle Button */}
-                <Pressable
-                    onPress={() =>
-                        setColorScheme(
-                            colorScheme === 'light'
-                                ? 'dark'
-                                : 'light'
-                        )
-                    }
-                    style={styles.themeButton}
-                >
-                    <Octicons
-                        name={
-                            colorScheme === 'dark'
-                                ? "moon"
-                                : "sun"
-                        }
-                        size={36}
-                        color={theme.text}
-                        style={{ width: 36 }}
-                    />
-                </Pressable>
-            </View>
+      // Navigate back to home screen
+      router.push('/');
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-            {/* Save & Cancel Buttons */}
-            <View style={styles.buttonContainer}>
+  // 🎨 Create styles based on theme
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      paddingHorizontal: 10,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      fontFamily: 'Inter_500Medium',
+      color: theme.text,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      gap: 10,
+    },
+    input: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      fontFamily: 'Inter_500Medium',
+      minHeight: 48,
+      color: theme.text,
+      backgroundColor: theme.background,
+    },
+    themeButton: {
+      padding: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      padding: 10,
+      gap: 10,
+    },
+    button: {
+      flex: 1,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      minHeight: 48,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    saveButton: {
+      backgroundColor: '#007AFF',
+    },
+    cancelButton: {
+      backgroundColor: '#888',
+    },
+    buttonText: {
+      fontSize: 16,
+      color: 'white',
+      fontWeight: '600',
+    },
+  });
 
-                {/* Save Button */}
-                <Pressable
-                    onPress={handleSave}
-                    style={[styles.button, styles.saveButton]}
-                >
-                    <Text style={styles.saveButtonText}>
-                        Save
-                    </Text>
-                </Pressable>
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Edit Todo</Text>
+      </View>
 
-                {/* Cancel Button */}
-                <Pressable
-                    onPress={() => router.push('/')}
-                    style={[styles.button, styles.cancelButton]}
-                >
-                    <Text style={styles.cancelButtonText}>
-                        Cancel
-                    </Text>
-                </Pressable>
+      {/* Input + Theme Toggle */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={todo?.title || ''}
+          onChangeText={(text) =>
+            setTodo(prev => prev ? { ...prev, title: text } : null)
+          }
+          // Save when user presses enter
+          onSubmitEditing={handleSave}
+        />
 
-            </View>
+        {/* Theme Toggle Button */}
+        <Pressable
+          onPress={() =>
+            setColorScheme(
+              colorScheme === 'light' ? 'dark' : 'light'
+            )
+          }
+          style={styles.themeButton}
+        >
+          <Octicons
+            name={colorScheme === 'light' ? 'moon' : 'sun'}
+            size={24}
+            color={theme.icon}
+          />
+        </Pressable>
+      </View>
 
-            {/* Status Bar Theme */}
-            <StatusBar
-                style={
-                    colorScheme === 'dark'
-                        ? 'light'
-                        : 'dark'
-                }
-            />
+      {/* Save & Cancel Buttons */}
+      <View style={styles.buttonContainer}>
+        {/* Save Button */}
+        <Pressable
+          onPress={handleSave}
+          style={[styles.button, styles.saveButton]}
+        >
+          <Text style={styles.buttonText}>Save</Text>
+        </Pressable>
 
-        </SafeAreaView>
-    );
+        {/* Cancel Button */}
+        <Pressable
+          onPress={() => router.push('/')}
+          style={[styles.button, styles.cancelButton]}
+        >
+          <Text style={styles.buttonText}>Cancel</Text>
+        </Pressable>
+      </View>
+
+      {/* Status Bar Theme */}
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+    </SafeAreaView>
+  );
 }
